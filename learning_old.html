@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Audiobook</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        .pdf-viewer {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pdf-content {
+            width: 100%;
+            height: 80vh;
+            border: none;
+            border-radius: 10px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #666;
+            position: relative;
+        }
+
+        .pdf-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+        }
+
+        .page-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .page-navigation {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .nav-btn {
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(102, 126, 234, 1);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .audio-controls {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            height: fit-content;
+        }
+
+        .book-info {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .book-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .book-author {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .current-page-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .page-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .page-duration {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .audio-player {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .progress-container {
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .control-btn.play-pause {
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .speed-btn {
+            background: #e9ecef;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .speed-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .chapter-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .chapter-item {
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .chapter-item:hover {
+            background: #f0f2ff;
+            border-left-color: #667eea;
+        }
+
+        .chapter-item.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-left-color: #fff;
+        }
+
+        .chapter-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .chapter-duration {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .pdf-content {
+                height: 50vh;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="pdf-viewer">
+            <div class="page-indicator">Page <span id="currentPage">1</span> of <span id="totalPages">--</span></div>
+            <div class="pdf-content" id="pdfContent">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading audiobook...</p>
+                </div>
+            </div>
+            <div class="page-navigation">
+                <button class="nav-btn" id="prevPageBtn" disabled>← Previous</button>
+                <button class="nav-btn" id="nextPageBtn">Next →</button>
+            </div>
+        </div>
+
+        <div class="audio-controls">
+            <div class="book-info">
+                <div class="book-title" id="bookTitle">Interactive Audiobook</div>
+                <div class="book-author" id="bookAuthor">Loading...</div>
+            </div>
+
+            <div class="current-page-info">
+                <div class="page-title" id="currentPageTitle">Page 1</div>
+                <div class="page-duration" id="currentPageDuration">--:--</div>
+            </div>
+
+            <div class="audio-player">
+                <div class="progress-container">
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="time-display">
+                        <span id="currentTime">0:00</span>
+                        <span id="totalTime">0:00</span>
+                    </div>
+                </div>
+
+                <div class="player-controls">
+                    <button class="control-btn" id="prevBtn" disabled>⏮</button>
+                    <button class="control-btn play-pause" id="playPauseBtn">▶</button>
+                    <button class="control-btn" id="nextBtn">⏭</button>
+                </div>
+
+                <div class="speed-control">
+                    <span>Speed:</span>
+                    <button class="speed-btn" data-speed="0.75">0.75x</button>
+                    <button class="speed-btn active" data-speed="1">1x</button>
+                    <button class="speed-btn" data-speed="1.25">1.25x</button>
+                    <button class="speed-btn" data-speed="1.5">1.5x</button>
+                </div>
+            </div>
+
+            <div class="chapter-list" id="chapterList"></div>
+        </div>
+    </div>
+
+    <audio id="audioPlayer" preload="metadata"></audio>
+
+    <script>
+        // ===== CONFIGURATION SECTION =====
+        // Modify these settings for your audiobook
+        const AUDIOBOOK_CONFIG = {
+            title: "Your Audiobook Title",
+            author: "Author Name",
+            pdfFile: "assets/book.pdf", // Path to your PDF file
+            chapters: [
+                { "title": "SHKRONJA ELIF ا", "audio": "assets/audio/page_6.aac" },
+                { "title": "SHENJA SUKUN _ ْ", "audio": "assets/audio/page_8.aac" },
+                { "title": "SHKRONJA “B” (ب - BE)", "audio": "assets/audio/page_9.aac" },
+                { "title": "SHKRONJA “T” (ت - TE)", "audio": "assets/audio/page_11.aac" },
+                { "title": "SHKRONJA “Th” (ث - THE)", "audio": "assets/audio/page_12.aac" },
+                { "title": "SHKRONJA “Xh” (ج - XHIM)", "audio": "assets/audio/page_13.aac" },
+                { "title": "SHKRONJA “D” (د - DEL)", "audio": "assets/audio/page_14.aac" },
+                { "title": "SHKRONJA “Dh” (ذ - DHEL)", "audio": "assets/audio/page_15.aac" },
+                { "title": "SHKRONJA “Rr” (ر - RRA)", "audio": "assets/audio/page_16.aac" },
+                { "title": "FUNKSIONI I ELIFIT ا PA ZANORE", "audio": "assets/audio/page_17.aac" },
+                { "title": "SHKRONJA “Z” (ز - ZE)", "audio": "assets/audio/page_18.aac" },
+                { "title": "SHENJA TENVIN ٌ__ٍ__ً_", "audio": "assets/audio/page_19.aac" },
+                { "title": "SHKRONJA “S” (س - SIN)", "audio": "assets/audio/page_21.aac" },
+                { "title": "SHKRONJA “W” (و - WEW)", "audio": "assets/audio/page_22.aac" },
+                { "title": "SHENJA E TESHDIDIT ّ_", "audio": "assets/audio/page_23.aac" },
+                { "title": "SHKRONJA “N” (ن - NUN)", "audio": "assets/audio/page_24.aac" },
+                { "title": "SHKRONJA “J” (ى - JE)", "audio": "assets/audio/page_25.aac" },
+                { "title": "VOKALET E GJATA", "audio": "assets/audio/page_26.aac" },
+                { "title": "SHKRONJA “F” (ف - FE)", "audio": "assets/audio/page_28.aac" },
+                { "title": "SHKRONJA “L” (ل - LEM)", "audio": "assets/audio/page_29.aac" },
+                { "title": "NYJA SHQUESE “EL” - ال", "audio": "assets/audio/page_31.aac" },
+                { "title": "FJALA E ALLAHUT - الله", "audio": "assets/audio/page_33.aac" },
+                { "title": "SHKRONJA “SH” (ش - SHIN)", "audio": "assets/audio/page_34.aac" },
+                { "title": "SHKRONJA “M” (م - MIM)", "audio": "assets/audio/page_35.aac" },
+                { "title": "TINGULLI PA ZË HEMZE - ء", "audio": "assets/audio/page_36.aac" },
+                { "title": "SHKRONJA “K” (ك - KEF)", "audio": "assets/audio/page_38.aac" },
+                { "title": "SHKRONJA “H” (ه - HE)", "audio": "assets/audio/page_39.aac" },
+                { "title": "SHKRONJA ق - KAF", "audio": "assets/audio/page_40.aac" },
+                { "title": "SHKRONJA ح - HA", "audio": "assets/audio/page_42.aac" },
+                { "title": "SHKRONJA خ - HA", "audio": "assets/audio/page_44.aac" },
+                { "title": "SHKRONJA ص - SAD", "audio": "assets/audio/page_46.aac" },
+                { "title": "SHKRONJA ض - DAD", "audio": "assets/audio/page_48.aac" },
+                { "title": "SHKRONJA ط - TA", "audio": "assets/audio/page_50.aac" },
+                { "title": "SHKRONJA ظ - DHA", "audio": "assets/audio/page_52.aac" },
+                { "title": "SHKRONJA ع - AJN", "audio": "assets/audio/page_54.aac" },
+                { "title": "SHKRONJA غ - GAJN", "audio": "assets/audio/page_56.aac" },
+                { "title": "DEFINICIONI I TEXHVIDIT", "audio": "assets/audio/page_59.aac" },
+                { "title": "BESMELEJA (BISMIL-LAHI)", "audio": "assets/audio/page_60.aac" },
+                { "title": "KASR - ZANORET E SHKURTRA", "audio": "assets/audio/page_61.aac" },
+                { "title": "RREGULLAT E LEXIMIT TË SHKRONJAVE DHE ZANOREVE NË FUND TË AJETIT OSE NË SHENJAT PËR PUSHIM GJATË LEXIMIT", "audio": "assets/audio/page_62.aac" },
+                { "title": "MEDI TABIJ", "audio": "assets/audio/page_64.aac" },
+                { "title": "SHKAKTARËT E ZGJATIMEVE JO TË NATYRSHME", "audio": "assets/audio/page_66.aac" },
+                { "title": "MEDI MUNFASIL — ZGJATIMI NË MES TË DY FJALËVE", "audio": "assets/audio/page_67.aac" },
+                { "title": "MEDI LAZIM — ZGJATIMI I PATJETËRSUESHËM", "audio": "assets/audio/page_68.aac" },
+                { "title": "MEDI LAZIM — (vazhdim)", "audio": "assets/audio/page_69.aac" },
+                { "title": "MEDI LAZIM — (vazhdim)", "audio": "assets/audio/page_70.aac" },
+                { "title": "MEDI ARID — ZGJATIMI I RASTIT", "audio": "assets/audio/page_71.aac" },
+                { "title": "MEDI LIJN — ZGJATIMI I LEHTË DHE I BUTË", "audio": "assets/audio/page_72.aac" },
+                { "title": "DAMIIR — PËREMRI VETOR", "audio": "assets/audio/page_73.aac" },
+                { "title": "NUNI I PAVOKALIZUAR (ْن) DHE TENVINI (ٌاً اٍ ا)", "audio": "assets/audio/page_74.aac" },
+                { "title": "MËNYRAT E LEXIMIT TË NUNIT SAKIN DHE TENVINIT", "audio": "assets/audio/page_75.aac" },
+                { "title": "IKLABI — SHNDËRRIMI", "audio": "assets/audio/page_77.aac" },
+                { "title": "IDGAM MEAL GUNNEH — SHKRIRJA E NUNIT SAKIN DHE TENVINI ME TINGULLIM HUNDOR", "audio": "assets/audio/page_78.aac" },
+                { "title": "IDGAM BILA GUNNEH — SHKRIRJA E NUNIT SAKIN DHE TENVINI PA TINGULLIM HUNDOR", "audio": "assets/audio/page_80.aac" },
+                { "title": "IHFAJA — TË FSHEHURIT", "audio": "assets/audio/page_81.aac" },
+                { "title": "IHFA SHEFEVIJ — FSHEHJA BUZORE E MIMIT (م)", "audio": "assets/audio/page_83.aac" },
+                { "title": "IDGAM SHEFEVIJ — SHKRIRJE BUZORE E MIMIT", "audio": "assets/audio/page_84.aac" },
+                { "title": "IDGAM MUTEMATHILEJN — BASHKËNGJITJA E SHKRONJAVE TË NJËJTA", "audio": "assets/audio/page_85.aac" },
+                { "title": "IDGAM MUTEXHANISEJN — BASHKËNGJITJA E SHKRONJAVE TË NGJASHME", "audio": "assets/audio/page_86.aac" },
+                { "title": "SEKTEJA — PAUZA FRYMORE", "audio": "assets/audio/page_87.aac" }
+            ],
+            audioFiles: [
+                "assets/audio/page_6.aac",
+                "assets/audio/page_8.aac",
+                "assets/audio/page_9.aac",
+                "assets/audio/page_11.aac",
+                "assets/audio/page_12.aac",
+                "assets/audio/page_13.aac",
+                "assets/audio/page_14.aac",
+                "assets/audio/page_15.aac",
+                "assets/audio/page_16.aac",
+                "assets/audio/page_17.aac",
+                "assets/audio/page_18.aac",
+                "assets/audio/page_19.aac",
+                "assets/audio/page_21.aac",
+                "assets/audio/page_22.aac",
+                "assets/audio/page_23.aac",
+                "assets/audio/page_24.aac",
+                "assets/audio/page_25.aac",
+                "assets/audio/page_26.aac",
+                "assets/audio/page_28.aac",
+                "assets/audio/page_29.aac",
+                "assets/audio/page_31.aac",
+                "assets/audio/page_33.aac",
+                "assets/audio/page_34.aac",
+                "assets/audio/page_35.aac",
+                "assets/audio/page_36.aac",
+                "assets/audio/page_38.aac",
+                "assets/audio/page_39.aac",
+                "assets/audio/page_40.aac",
+                "assets/audio/page_42.aac",
+                "assets/audio/page_44.aac",
+                "assets/audio/page_46.aac",
+                "assets/audio/page_48.aac",
+                "assets/audio/page_50.aac",
+                "assets/audio/page_52.aac",
+                "assets/audio/page_54.aac",
+                "assets/audio/page_56.aac",
+                "assets/audio/page_59.aac",
+                "assets/audio/page_60.aac",
+                "assets/audio/page_61.aac",
+                "assets/audio/page_62.aac",
+                "assets/audio/page_64.aac",
+                "assets/audio/page_66.aac",
+                "assets/audio/page_67.aac",
+                "assets/audio/page_68.aac",
+                "assets/audio/page_69.aac",
+                "assets/audio/page_70.aac",
+                "assets/audio/page_71.aac",
+                "assets/audio/page_72.aac",
+                "assets/audio/page_73.aac",
+                "assets/audio/page_74.aac",
+                "assets/audio/page_75.aac",
+                "assets/audio/page_77.aac",
+                "assets/audio/page_78.aac",
+                "assets/audio/page_80.aac",
+                "assets/audio/page_81.aac",
+                "assets/audio/page_83.aac",
+                "assets/audio/page_84.aac",
+                "assets/audio/page_85.aac",
+                "assets/audio/page_86.aac",
+                "assets/audio/page_87.aac"
+            ],
+            // Optional: Custom page titles (if not provided, will use "Page X")
+            pageTitles: {
+                1: "Introduction",
+                // 2: "Chapter 1: Getting Started",
+                // 3: "Chapter 1: Continued",
+                // Add custom titles for specific pages
+            }
+        };
+
+        class AudiobookPlayer {
+            constructor() {
+                this.audioPlayer = document.getElementById('audioPlayer');
+                this.currentPageIndex = 0;
+                this.totalPages = 0;
+                this.isPlaying = false;
+                this.isLoading = true;
+
+                this.initializeElements();
+                this.loadAudiobook();
+            }
+
+            initializeElements() {
+                this.playPauseBtn = document.getElementById('playPauseBtn');
+                this.prevBtn = document.getElementById('prevBtn');
+                this.nextBtn = document.getElementById('nextBtn');
+                this.prevPageBtn = document.getElementById('prevPageBtn');
+                this.nextPageBtn = document.getElementById('nextPageBtn');
+                this.progressBar = document.getElementById('progressBar');
+                this.progressFill = document.getElementById('progressFill');
+                this.currentTimeEl = document.getElementById('currentTime');
+                this.totalTimeEl = document.getElementById('totalTime');
+                this.chapterList = document.getElementById('chapterList');
+                this.pdfContent = document.getElementById('pdfContent');
+                this.currentPageEl = document.getElementById('currentPage');
+                this.totalPagesEl = document.getElementById('totalPages');
+                this.currentPageTitleEl = document.getElementById('currentPageTitle');
+                this.currentPageDurationEl = document.getElementById('currentPageDuration');
+
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Audio player events
+                this.audioPlayer.addEventListener('loadedmetadata', () => this.updateDuration());
+                this.audioPlayer.addEventListener('timeupdate', () => this.updateProgress());
+                this.audioPlayer.addEventListener('ended', () => this.nextPage());
+                this.audioPlayer.addEventListener('canplay', () => this.handleAudioReady());
+
+                // Control buttons
+                this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+                this.prevBtn.addEventListener('click', () => this.previousPage());
+                this.nextBtn.addEventListener('click', () => this.nextPage());
+                this.prevPageBtn.addEventListener('click', () => this.previousPage());
+                this.nextPageBtn.addEventListener('click', () => this.nextPage());
+
+                // Progress bar
+                this.progressBar.addEventListener('click', (e) => this.seekTo(e));
+
+                // Speed controls
+                document.querySelectorAll('.speed-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.changeSpeed(e.target.dataset.speed));
+                });
+            }
+
+            async loadAudiobook() {
+                try {
+                    // Set book info
+                    document.getElementById('bookTitle').textContent = AUDIOBOOK_CONFIG.title;
+                    document.getElementById('bookAuthor').textContent = AUDIOBOOK_CONFIG.author;
+
+                    // Set total pages
+                    this.totalPages = AUDIOBOOK_CONFIG.chapters.length;
+                    this.totalPagesEl.textContent = this.totalPages;
+
+                    // Load PDF
+                    await this.loadPDF();
+
+                    // Create chapter list
+                    this.createChapterList();
+
+                    // Load first page
+                    this.loadPage(0);
+
+                    this.isLoading = false;
+                } catch (error) {
+                    console.error('Error loading audiobook:', error);
+                    this.showError('Failed to load audiobook. Please check file paths.');
+                }
+            }
+
+            async loadPDF() {
+                return new Promise((resolve, reject) => {
+                    const iframe = document.createElement('iframe');
+                    iframe.className = 'pdf-frame';
+                    iframe.src = AUDIOBOOK_CONFIG.pdfFile;
+                    iframe.onload = () => resolve();
+                    iframe.onerror = () => reject(new Error('Failed to load PDF'));
+
+                    this.pdfContent.innerHTML = '';
+                    this.pdfContent.appendChild(iframe);
+                });
+            }
+
+            createChapterList() {
+                this.chapterList.innerHTML = '';
+
+                AUDIOBOOK_CONFIG.chapters.forEach((chapter, index) => {
+                    const pageNumber = index + 1;
+                    const pageTitle = chapter.title || `Page ${pageNumber}`;
+
+                    const item = document.createElement('div');
+                    item.className = `chapter-item ${index === 0 ? 'active' : ''}`;
+                    item.innerHTML = `
+                        <div class="chapter-title">${pageTitle}</div>
+                        <div class="chapter-duration">Loading...</div>
+                    `;
+                    item.addEventListener('click', () => this.loadPage(index));
+                    this.chapterList.appendChild(item);
+                });
+            }
+
+            loadPage(pageIndex) {
+                if (pageIndex < 0 || pageIndex >= this.totalPages) return;
+
+                const wasPlaying = this.isPlaying;
+                if (wasPlaying) {
+                    this.audioPlayer.pause();
+                }
+
+                this.currentPageIndex = pageIndex;
+                const pageNumber = pageIndex + 1;
+                const audioFile = AUDIOBOOK_CONFIG.chapters[pageIndex].audio;
+                const pageTitle = AUDIOBOOK_CONFIG.chapters[pageIndex].title || `Page ${pageNumber}`;
+
+                // Update audio source
+                this.audioPlayer.src = audioFile;
+
+                // Update UI
+                this.currentPageEl.textContent = pageNumber;
+                this.currentPageTitleEl.textContent = pageTitle;
+
+                // Update chapter list
+                document.querySelectorAll('.chapter-item').forEach((item, i) => {
+                    item.classList.toggle('active', i === pageIndex);
+                });
+
+                // Update navigation buttons
+                this.prevBtn.disabled = pageIndex === 0;
+                this.nextBtn.disabled = pageIndex === this.totalPages - 1;
+                this.prevPageBtn.disabled = pageIndex === 0;
+                this.nextPageBtn.disabled = pageIndex === this.totalPages - 1;
+
+                // Update PDF page (basic implementation - you might need to enhance this)
+                this.updatePDFPage(pageNumber);
+
+                // Resume playing if it was playing before
+                if (wasPlaying && !this.isLoading) {
+                    setTimeout(() => {
+                        this.audioPlayer.play().catch(console.error);
+                    }, 100);
+                }
+            }
+
+            updatePDFPage(pageNumber) {
+                // This is a basic implementation
+                // For more advanced PDF navigation, you might need PDF.js
+                const iframe = this.pdfContent.querySelector('iframe');
+                if (iframe) {
+                    // Try to navigate to specific page (works with some PDF viewers)
+                    iframe.src = `${AUDIOBOOK_CONFIG.pdfFile}#page=${pageNumber}`;
+                }
+            }
+
+            handleAudioReady() {
+                // Update duration in chapter list
+                const currentItem = this.chapterList.children[this.currentPageIndex];
+                if (currentItem) {
+                    const durationEl = currentItem.querySelector('.chapter-duration');
+                    durationEl.textContent = this.formatTime(this.audioPlayer.duration);
+                }
+
+                this.currentPageDurationEl.textContent = this.formatTime(this.audioPlayer.duration);
+            }
+
+            togglePlayPause() {
+                if (this.isLoading) return;
+
+                if (this.isPlaying) {
+                    this.audioPlayer.pause();
+                    this.playPauseBtn.textContent = '▶';
+                } else {
+                    this.audioPlayer.play().catch(console.error);
+                    this.playPauseBtn.textContent = '⏸';
+                }
+                this.isPlaying = !this.isPlaying;
+            }
+
+            previousPage() {
+                this.loadPage(this.currentPageIndex - 1);
+            }
+
+            nextPage() {
+                this.loadPage(this.currentPageIndex + 1);
+            }
+
+            updateProgress() {
+                if (this.audioPlayer.duration) {
+                    const progress = (this.audioPlayer.currentTime / this.audioPlayer.duration) * 100;
+                    this.progressFill.style.width = `${progress}%`;
+                    this.currentTimeEl.textContent = this.formatTime(this.audioPlayer.currentTime);
+                }
+            }
+
+            updateDuration() {
+                this.totalTimeEl.textContent = this.formatTime(this.audioPlayer.duration || 0);
+            }
+
+            seekTo(event) {
+                if (!this.audioPlayer.duration) return;
+
+                const rect = this.progressBar.getBoundingClientRect();
+                const progress = (event.clientX - rect.left) / rect.width;
+                this.audioPlayer.currentTime = progress * this.audioPlayer.duration;
+            }
+
+            changeSpeed(speed) {
+                this.audioPlayer.playbackRate = parseFloat(speed);
+                document.querySelectorAll('.speed-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.speed === speed);
+                });
+            }
+
+            formatTime(seconds) {
+                if (isNaN(seconds)) return '0:00';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            showError(message) {
+                this.pdfContent.innerHTML = `
+                    <div style="text-align: center; color: #dc3545;">
+                        <h3>⚠️ Error</h3>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize the audiobook player when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new AudiobookPlayer();
+        });
+    </script>
+</body>
+
+</html>
